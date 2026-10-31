@@ -1,0 +1,17 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: weather-truck-routing
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://lollinng.github.io,https://prathameshjadhav.in,http://prathameshjadhav.in
+      - key: UPSTREAM_USER_AGENT
+        value: weather-truck-routing/1.0 (+https://github.com/lollinng/weather-aware-truck-routing)

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    # Builds the production image (API + UI) and checks that it serves both.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t truck-routing .
+      - run: docker run -d --name app -p 8000:8000 -e DJANGO_SECRET_KEY=ci-only truck-routing
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do curl -fs http://localhost:8000/api/health && break; sleep 1; done
+          curl -fs http://localhost:8000/api/health | grep '"ok"'
+          curl -fs http://localhost:8000/ | grep -q '<div id="root">'
+      - if: failure()
+        run: docker logs app
